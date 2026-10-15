@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CalendarDays, Clock, DollarSign, MapPin, Pencil, Tag, User, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Clock, IndianRupee, MapPin, Pencil, Tag, User, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -57,7 +57,7 @@ function EventDetails() {
             <Info icon={<MapPin />} label="Venue" value={e.venue} />
             <Info icon={<User />} label="Organizer" value={e.organizer} />
             <Info icon={<Users />} label="Expected Attendees" value={e.expected_attendees.toLocaleString()} />
-            <Info icon={<DollarSign />} label="Budget" value={Number(e.budget).toLocaleString(undefined, { style: "currency", currency: "USD" })} />
+            <Info icon={<IndianRupee />} label="Budget" value={Number(e.budget).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 })} />
             <Info icon={<Tag />} label="Type" value={e.type} />
             <Info icon={<CalendarDays />} label="Created" value={new Date(e.created_at).toLocaleDateString()} />
           </div>
