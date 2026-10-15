@@ -67,6 +67,6 @@ export function formatTime(t: string | null) {
   if (!t) return "—";
   const [h, m] = t.split(":").map(Number);
   const d = new Date();
-  d.setHours(h, m);
+  d.setHours(h ?? 0, m ?? 0);
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
