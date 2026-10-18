@@ -1,9 +1,34 @@
 import { queryOptions } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
-export type EventRow = Database["public"]["Tables"]["events"]["Row"];
-export type EventInput = Database["public"]["Tables"]["events"]["Insert"];
+export interface EventRow {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  date: string;
+  start_time: string | null;
+  end_time: string | null;
+  venue: string;
+  organizer: string;
+  expected_attendees: number;
+  budget: number;
+  status: string;
+  created_at: string;
+}
+
+export type EventInput = {
+  name: string;
+  type?: string;
+  description?: string | null;
+  date: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  venue?: string;
+  organizer?: string;
+  expected_attendees?: number;
+  budget?: number;
+  status?: string;
+};
 
 export const EVENT_STATUSES = ["Upcoming", "Completed", "Cancelled"] as const;
 export const EVENT_TYPES = [
@@ -17,15 +42,38 @@ export const EVENT_TYPES = [
   "Other",
 ] as const;
 
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.["VITE_API_BASE_URL"]
+    ? (import.meta.env["VITE_API_BASE_URL"] as string).replace(/\/+$/, "")
+    : "http://localhost:5001/api");
+
+async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options?.headers || {}),
+    },
+    ...options,
+  });
+
+  if (!response.ok) {
+    let errorMessage = `HTTP error ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorData.message || errorMessage;
+    } catch {
+      // Ignore non-JSON response body
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
 export const eventsQuery = queryOptions({
   queryKey: ["events"],
   queryFn: async () => {
-    const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .order("date", { ascending: true });
-    if (error) throw error;
-    return data;
+    return fetchJson<EventRow[]>(`${API_BASE_URL}/events`);
   },
 });
 
@@ -33,26 +81,35 @@ export const eventQuery = (id: string) =>
   queryOptions({
     queryKey: ["events", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("events").select("*").eq("id", id).maybeSingle();
-      if (error) throw error;
-      return data;
+      try {
+        return await fetchJson<EventRow>(`${API_BASE_URL}/events/${id}`);
+      } catch (err) {
+        if (err instanceof Error && err.message.toLowerCase().includes("not found")) {
+          return null;
+        }
+        throw err;
+      }
     },
   });
 
-export async function createEvent(input: EventInput) {
-  const { data, error } = await supabase.from("events").insert(input).select().single();
-  if (error) throw error;
-  return data;
+export async function createEvent(input: EventInput): Promise<EventRow> {
+  return fetchJson<EventRow>(`${API_BASE_URL}/events`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
-export async function updateEvent(id: string, input: EventInput) {
-  const { error } = await supabase.from("events").update(input).eq("id", id);
-  if (error) throw error;
+export async function updateEvent(id: string, input: EventInput): Promise<EventRow> {
+  return fetchJson<EventRow>(`${API_BASE_URL}/events/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
 }
 
-export async function deleteEvent(id: string) {
-  const { error } = await supabase.from("events").delete().eq("id", id);
-  if (error) throw error;
+export async function deleteEvent(id: string): Promise<void> {
+  await fetchJson<{ message: string; id: string }>(`${API_BASE_URL}/events/${id}`, {
+    method: "DELETE",
+  });
 }
 
 export function formatDate(d: string) {
